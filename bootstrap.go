@@ -70,8 +70,9 @@ func initLog() {
 		zerolog.SetGlobalLevel(zerolog.FatalLevel)
 	case "panic":
 		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	default:
+		log.Fatal().Msgf("invalid log level: %s", logLevel)
 	}
-
 }
 
 func initHttpEngine() {
