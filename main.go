@@ -9,7 +9,7 @@ import (
 func main() {
 	var configFile string
 
-	flag.StringVar(&configFile, "c", "~/development", "指定配置文件")
+	flag.StringVar(&configFile, "c", "./config/development.ini", "指定配置文件")
 	flag.Parse()
 	loadConfig(configFile)
 
