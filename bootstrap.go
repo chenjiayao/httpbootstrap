@@ -53,7 +53,7 @@ func initLog() {
 	zerolog.TimeFieldFormat = "2006-01-02 15:04:05"
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
-	logLevel := viper.GetString("log_level")
+	logLevel := viper.GetString("log.level")
 
 	switch logLevel {
 	case "trace":
