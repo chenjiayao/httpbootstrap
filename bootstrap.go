@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"httptemplate/globals"
-	"httptemplate/routes"
-	"httptemplate/utils/logger"
+	"httpbootstrap/globals"
+	"httpbootstrap/routes"
+	"httpbootstrap/utils/logger"
 	"net/http"
 	"os"
 	"os/signal"

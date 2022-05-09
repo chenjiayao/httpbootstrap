@@ -1,9 +1,9 @@
 package routes
 
 import (
-	"httptemplate/controllers"
-	"httptemplate/globals"
-	"httptemplate/middlewares"
+	"httpbootstrap/controllers"
+	"httpbootstrap/globals"
+	"httpbootstrap/middlewares"
 )
 
 var (

@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"httptemplate/utils/logger"
+	"httpbootstrap/utils/logger"
 
 	"github.com/gin-gonic/gin"
 )

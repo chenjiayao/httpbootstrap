@@ -1,4 +1,4 @@
-module httptemplate
+module httpbootstrap
 
 go 1.18
 
