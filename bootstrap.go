@@ -36,8 +36,8 @@ func run() {
 			Addr:    fmt.Sprintf("%s:%d", address, port),
 			Handler: globals.Engine,
 		}
+		logger.Infof("http server listen on %s:%d", address, port)
 
-		logger.Logger.Sugar().Infof("http server listen on %s:%d", address, port)
 		err := globals.HttpServer.ListenAndServe()
 		if err != nil {
 			os.Exit(1)
@@ -84,8 +84,7 @@ func initCache() {
 	})
 
 	if err := globals.RedisClient.Ping(context.TODO()).Err(); err != nil {
-		logger.Logger.Sugar().Fatalf("redis connect error: %s", err)
-		os.Exit(1)
+		logger.Fatalf("redis connect error: %s", err)
 	}
 }
 
@@ -100,8 +99,7 @@ func initDB() {
 		SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
 	}), &gorm.Config{})
 	if err != nil {
-		logger.Logger.Sugar().Fatalf("db connect error: %s", err)
-		os.Exit(1)
+		logger.Fatalf("db connect error: %s", err)
 	}
 	globals.DB = db
 }
@@ -113,8 +111,8 @@ func waitSignal() {
 	ctx := context.Background()
 	ctx, _ = context.WithTimeout(ctx, time.Second*5)
 	err := globals.HttpServer.Shutdown(ctx)
-	logger.Logger.Sugar().Infof("http server shutdown: %s", err)
-	logger.Logger.Sync()
+	logger.Infof("http server shutdown: %s", err)
+	logger.Sync()
 
 	if err != nil {
 	}
