@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"httptemplate/globals"
 	"httptemplate/routes"
+	"httptemplate/utils/logger"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,9 +16,6 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -25,9 +23,9 @@ import (
 
 func run() {
 
-	initLog()
+	logger.InitLogger()
 	initCache()
-	initDB()
+	// initDB()
 	initHttpEngine()
 	routes.LoadRoute()
 
@@ -38,41 +36,14 @@ func run() {
 			Addr:    fmt.Sprintf("%s:%d", address, port),
 			Handler: globals.Engine,
 		}
-		log.Info().Msgf("http server start at %s:%d", address, port)
 
+		logger.Logger.Sugar().Infof("http server listen on %s:%d", address, port)
 		err := globals.HttpServer.ListenAndServe()
 		if err != nil {
-			log.Fatal().Msgf("http server start failed: %v", err)
 			os.Exit(1)
 		}
 	}()
 	waitSignal()
-}
-
-func initLog() {
-	zerolog.TimeFieldFormat = "2006-01-02 15:04:05"
-	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
-
-	logLevel := viper.GetString("log.level")
-
-	switch logLevel {
-	case "trace":
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	case "warn":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	case "fatal":
-		zerolog.SetGlobalLevel(zerolog.FatalLevel)
-	case "panic":
-		zerolog.SetGlobalLevel(zerolog.PanicLevel)
-	default:
-		log.Fatal().Msgf("invalid log level: %s", logLevel)
-	}
 }
 
 func initHttpEngine() {
@@ -113,7 +84,7 @@ func initCache() {
 	})
 
 	if err := globals.RedisClient.Ping(context.TODO()).Err(); err != nil {
-		log.Fatal().Msgf("redis connect failed: %v", err)
+		logger.Logger.Sugar().Fatalf("redis connect error: %s", err)
 		os.Exit(1)
 	}
 }
@@ -129,7 +100,7 @@ func initDB() {
 		SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
 	}), &gorm.Config{})
 	if err != nil {
-		log.Fatal().Msgf("db connect failed: %v", err)
+		logger.Logger.Sugar().Fatalf("db connect error: %s", err)
 		os.Exit(1)
 	}
 	globals.DB = db
@@ -142,7 +113,9 @@ func waitSignal() {
 	ctx := context.Background()
 	ctx, _ = context.WithTimeout(ctx, time.Second*5)
 	err := globals.HttpServer.Shutdown(ctx)
-	log.Info().Msgf("http server shutdown: %v", err)
+	logger.Logger.Sugar().Infof("http server shutdown: %s", err)
+	logger.Logger.Sync()
+
 	if err != nil {
 	}
 }
