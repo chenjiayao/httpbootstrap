@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"httpbootstrap/globals"
 	"httpbootstrap/routes"
-	"httpbootstrap/utils/logger"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,13 +17,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func run() {
 
-	logger.InitLogger()
+	initLogger()
 	initCache()
 	// initDB()
 	initHttpEngine()
@@ -36,14 +38,57 @@ func run() {
 			Addr:    fmt.Sprintf("%s:%d", address, port),
 			Handler: globals.Engine,
 		}
-		logger.Infof("http server listen on %s:%d", address, port)
-
+		globals.Logger.Sugar().Infof("http server listen on %s:%d", address, port)
 		err := globals.HttpServer.ListenAndServe()
 		if err != nil {
 			os.Exit(1)
 		}
 	}()
 	waitSignal()
+}
+
+func initLogger() {
+	atomicLevel := zap.NewAtomicLevel()
+	level := viper.GetString("log.level")
+	switch level {
+	case "DEBUG":
+		atomicLevel.SetLevel(zapcore.DebugLevel)
+	case "INFO":
+		atomicLevel.SetLevel(zapcore.InfoLevel)
+	case "WARN":
+		atomicLevel.SetLevel(zapcore.WarnLevel)
+	case "ERROR":
+		atomicLevel.SetLevel(zapcore.ErrorLevel)
+	case "PANIC":
+		atomicLevel.SetLevel(zapcore.PanicLevel)
+	case "FATAL":
+		atomicLevel.SetLevel(zapcore.FatalLevel)
+	default:
+		log.Fatalf("error: log level %s is not supported", level)
+	}
+	zap.NewProduction()
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:        "time",
+		LevelKey:       "level",
+		NameKey:        "name",
+		CallerKey:      "line",
+		MessageKey:     "msg",
+		FunctionKey:    "func",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000"),
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.FullCallerEncoder,
+		EncodeName:     zapcore.FullNameEncoder,
+	}
+	zapCore := zapcore.NewCore(
+		zapcore.NewJSONEncoder(encoderConfig), //日志的编码方式，
+		zapcore.AddSync(os.Stdout),            //日志的输出位置
+		atomicLevel,                           // 日志等级
+	)
+	globals.Logger = zap.New(zapCore, zap.AddCaller(), zap.Fields(zap.String("appname", viper.GetString("log.appname"))))
+	globals.SugarLogger = globals.Logger.Sugar()
 }
 
 func initHttpEngine() {
@@ -84,7 +129,7 @@ func initCache() {
 	})
 
 	if err := globals.RedisClient.Ping(context.TODO()).Err(); err != nil {
-		logger.Fatalf("redis connect error: %s", err)
+		globals.SugarLogger.DPanic("redis client ping error", zap.Error(err))
 	}
 }
 
@@ -99,7 +144,7 @@ func initDB() {
 		SkipInitializeWithVersion: false, // 根据当前 MySQL 版本自动配置
 	}), &gorm.Config{})
 	if err != nil {
-		logger.Fatalf("db connect error: %s", err)
+		globals.SugarLogger.DPanicf("db connect error", zap.Error(err))
 	}
 	globals.DB = db
 }
@@ -111,8 +156,8 @@ func waitSignal() {
 	ctx := context.Background()
 	ctx, _ = context.WithTimeout(ctx, time.Second*5)
 	err := globals.HttpServer.Shutdown(ctx)
-	logger.Infof("http server shutdown: %s", err)
-	logger.Sync()
+	globals.SugarLogger.Infof("http server shutdown: %s", err)
+	globals.Logger.Sync()
 
 	if err != nil {
 	}
